@@ -36,6 +36,10 @@ type AccessToken struct {
 	Expiry time.Time
 }
 
+type TaskCreatedResponse struct {
+	Success string
+}
+
 func InitializeResources() {
 	fmt.Println("Program Starting")
 

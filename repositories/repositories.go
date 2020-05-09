@@ -25,7 +25,6 @@ func (r *TaskRepository) Create(task *u.TaskItem) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Creating Task")
 	return
 }
 
@@ -36,7 +35,7 @@ func (r *TaskRepository) ReadByUserID(userID string) map[int][]*u.TaskItem {
 
 	results := make(map[int][]*u.TaskItem)
 
-	filter := bson.M{"id": userID}
+	filter := bson.M{"userid": userID}
 	cur, err := collection.Find(ctx, filter)
 	if err != nil {
 		log.Fatal(err)
@@ -56,7 +55,6 @@ func (r *TaskRepository) ReadByUserID(userID string) map[int][]*u.TaskItem {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Reading Task")
 	return results
 }
 
