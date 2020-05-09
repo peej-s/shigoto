@@ -116,31 +116,6 @@ func shigotoUserHandler(rw http.ResponseWriter, req *http.Request) {
 	rw.Write(js)
 }
 
-func shigotoTokenHandler(rw http.ResponseWriter, req *http.Request) {
-	// Get UserID from request
-	vars := mux.Vars(req)
-	userID := vars["userID"]
-	var token *u.AccessToken = &u.AccessToken{}
-
-	// Get Token from Header
-	headerToken := req.Header.Get("Authorization")
-	splitToken := strings.Split(headerToken, "Bearer")
-	if len(splitToken) != 2 {
-		http.Error(rw, "Error: Bearer token not in proper format", http.StatusBadRequest)
-		return
-	}
-	headerToken = strings.TrimSpace(splitToken[1])
-	token.Token = headerToken
-
-	// Validate Token and UserID
-	err := auth.ValidateToken(token, userID)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	rw.Write([]byte("Valid Token"))
-}
-
 func Authenticator(rw http.ResponseWriter, req *http.Request, handler http.HandlerFunc) {
 	// Get UserID from request
 	vars := mux.Vars(req)
@@ -180,8 +155,6 @@ func main() {
 	rtr := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 	rtr.HandleFunc("/login", shigotoAuthHandler).Methods("POST")
 	rtr.HandleFunc("/register", shigotoUserHandler).Methods("POST")
-	// For debugging only, used to validate a user token
-	rtr.HandleFunc("/{userID:[a-zA-Z0-9-]+}/token", shigotoTokenHandler)
 
 	rtr.Handle("/{userID:[a-zA-Z0-9]+}/tasks", AuthenticationFilter(shigotoHandler))
 
