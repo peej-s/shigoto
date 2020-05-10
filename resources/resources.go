@@ -2,7 +2,6 @@ package resources
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -59,8 +58,6 @@ type DeleteResponse struct {
 }
 
 func InitializeResources() {
-	fmt.Println("Program Starting")
-
 	var MongoURI string = os.Getenv("SHIGOTO_MDB_STRING")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -70,5 +67,4 @@ func InitializeResources() {
 	}
 
 	DB = session.Database("shigoto")
-	fmt.Println("Server Ready For Action")
 }
