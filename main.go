@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"shigoto/auth"
@@ -178,10 +180,18 @@ func main() {
 	rtr := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 	rtr.HandleFunc("/login", shigotoAuthHandler).Methods("POST")
 	rtr.HandleFunc("/register", shigotoUserHandler).Methods("POST")
-
 	rtr.Handle("/{userID:[a-zA-Z0-9]+}/tasks", auth.AuthenticationFilter(shigotoHandler))
 	rtr.Handle("/{userID:[a-zA-Z0-9]+}/tasks/{taskID:[a-zA-Z0-9-]+}", auth.AuthenticationFilter(shigotoTaskHandler))
-
 	http.Handle("/", rtr)
-	http.ListenAndServe(":8080", nil)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		log.Printf("Defaulting to port %s", port)
+	}
+
+	log.Printf("Listening on port %s", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatal(err)
+	}
 }
