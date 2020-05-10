@@ -15,7 +15,7 @@ import (
 	b "golang.org/x/crypto/bcrypt"
 )
 
-func Authenticator(rw http.ResponseWriter, req *http.Request, handler http.HandlerFunc) {
+func authenticator(rw http.ResponseWriter, req *http.Request, handler http.HandlerFunc) {
 	// Get UserID from request
 	vars := mux.Vars(req)
 	userID := vars["userID"]
@@ -32,7 +32,7 @@ func Authenticator(rw http.ResponseWriter, req *http.Request, handler http.Handl
 	token.Token = headerToken
 
 	// Validate Token and UserID
-	err := ValidateToken(token, userID)
+	err := validateToken(token, userID)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -42,19 +42,34 @@ func Authenticator(rw http.ResponseWriter, req *http.Request, handler http.Handl
 
 }
 
-func AuthenticationFilter(handler http.HandlerFunc) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		Authenticator(rw, req, handler)
-	})
-}
-
-func GenerateToken(userID string) *u.AccessToken {
+func generateToken(userID string) *u.AccessToken {
 	token := make([]byte, 16)
 	rand.Read(token)
 	accessToken := &u.AccessToken{Token: fmt.Sprintf("%x", token), UserID: userID, Expiry: time.Now().AddDate(0, 0, 1)}
 	tokenRepository := &r.TokenRepository{}
 	tokenRepository.Upsert(accessToken)
 	return accessToken
+}
+
+func validateToken(token *u.AccessToken, currentUser string) error {
+	tokenRepository := &r.TokenRepository{}
+	savedToken := tokenRepository.ReadByUserID(currentUser)
+	if savedToken == nil {
+		return errors.New("Username does not exist")
+	}
+	if token.Token != savedToken.Token {
+		return errors.New(fmt.Sprintf("Token does not match saved token for user %s", currentUser))
+	}
+	if time.Now().After(savedToken.Expiry) {
+		return errors.New(fmt.Sprintf("Token expired for user %s", currentUser))
+	}
+	return nil
+}
+
+func AuthenticationFilter(handler http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		authenticator(rw, req, handler)
+	})
 }
 
 func ValidatePassword(loginRequest *u.User) (*u.AccessToken, error) {
@@ -76,7 +91,7 @@ func ValidatePassword(loginRequest *u.User) (*u.AccessToken, error) {
 		return nil, err
 	}
 
-	return GenerateToken(savedUser.UserID), nil
+	return generateToken(savedUser.UserID), nil
 }
 
 func RegisterUser(registerRequest *u.User) (*u.AccessToken, error) {
@@ -95,20 +110,5 @@ func RegisterUser(registerRequest *u.User) (*u.AccessToken, error) {
 	registerRequest.UserID = strings.ReplaceAll(g.New().String(), "-", "")
 
 	userRepository.Create(registerRequest)
-	return GenerateToken(registerRequest.UserID), nil
-}
-
-func ValidateToken(token *u.AccessToken, currentUser string) error {
-	tokenRepository := &r.TokenRepository{}
-	savedToken := tokenRepository.ReadByUserID(currentUser)
-	if savedToken == nil {
-		return errors.New("Username does not exist")
-	}
-	if token.Token != savedToken.Token {
-		return errors.New(fmt.Sprintf("Token does not match saved token for user %s", currentUser))
-	}
-	if time.Now().After(savedToken.Expiry) {
-		return errors.New(fmt.Sprintf("Token expired for user %s", currentUser))
-	}
-	return nil
+	return generateToken(registerRequest.UserID), nil
 }
