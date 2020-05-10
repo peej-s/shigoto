@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	auth "shigoto/auth"
+	"shigoto/auth"
 	r "shigoto/repositories"
 	u "shigoto/resources"
 
