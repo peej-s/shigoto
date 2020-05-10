@@ -14,11 +14,19 @@ import (
 // App-Specific Structs
 var DB *mongo.Database
 
+type PriorityValue int
+type TaskDescription string
+
 type TaskItem struct {
-	Priority int
-	Task     string
+	Priority *PriorityValue
+	Task     *TaskDescription
 	UserID   string // This should be the user ID, not the username
 	TaskID   string
+}
+
+type TaskUpdate struct {
+	Priority *PriorityValue
+	Task     *TaskDescription
 }
 
 // This can be used for both registration and login (for now)
@@ -36,8 +44,18 @@ type AccessToken struct {
 	Expiry time.Time
 }
 
-type TaskCreatedResponse struct {
+type CreateResponse struct {
 	Success string
+}
+
+type UpdateResponse struct {
+	Success string
+	Updated int
+}
+
+type DeleteResponse struct {
+	Success string
+	Deleted int
 }
 
 func InitializeResources() {

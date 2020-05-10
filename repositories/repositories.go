@@ -17,7 +17,7 @@ import (
 // Task Repository
 type TaskRepository struct{}
 
-func (r *TaskRepository) Create(task *u.TaskItem) {
+func (r *TaskRepository) Create(task *u.TaskItem) *u.CreateResponse {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	collection := u.DB.Collection("tasks")
@@ -25,15 +25,15 @@ func (r *TaskRepository) Create(task *u.TaskItem) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return
+	return &u.CreateResponse{Success: task.TaskID}
 }
 
-func (r *TaskRepository) ReadByUserID(userID string) map[int][]*u.TaskItem {
+func (r *TaskRepository) ReadByUserID(userID string) map[u.PriorityValue][]*u.TaskItem {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	collection := u.DB.Collection("tasks")
 
-	results := make(map[int][]*u.TaskItem)
+	results := make(map[u.PriorityValue][]*u.TaskItem)
 
 	filter := bson.M{"userid": userID}
 	cur, err := collection.Find(ctx, filter)
@@ -48,7 +48,7 @@ func (r *TaskRepository) ReadByUserID(userID string) map[int][]*u.TaskItem {
 			log.Fatal(err)
 		}
 
-		results[elem.Priority] = append(results[elem.Priority], &elem)
+		results[*elem.Priority] = append(results[*elem.Priority], &elem)
 	}
 
 	if err := cur.Err(); err != nil {
@@ -58,14 +58,38 @@ func (r *TaskRepository) ReadByUserID(userID string) map[int][]*u.TaskItem {
 	return results
 }
 
-func (r *TaskRepository) Update(id string) {
-	fmt.Println("Updating Task")
-	return
+func (r *TaskRepository) Update(userID string, taskID string, updates *u.TaskUpdate) *u.UpdateResponse {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	collection := u.DB.Collection("tasks")
+	filter := bson.M{
+		"userid": userID,
+		"taskid": taskID,
+	}
+
+	update := bson.M{
+		"$set": updates,
+	}
+	updateResult, err := collection.UpdateOne(ctx, filter, update, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &u.UpdateResponse{Success: fmt.Sprintf("%t", true), Updated: int(updateResult.MatchedCount)}
 }
 
-func (r *TaskRepository) Delete(id string) {
-	fmt.Println("Deleting Task")
-	return
+func (r *TaskRepository) Delete(userID string, taskID string) *u.DeleteResponse {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	collection := u.DB.Collection("tasks")
+	filter := bson.M{
+		"userid": userID,
+		"taskid": taskID,
+	}
+	deleteResult, err := collection.DeleteOne(ctx, filter)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &u.DeleteResponse{Success: fmt.Sprintf("%t", true), Deleted: int(deleteResult.DeletedCount)}
 }
 
 // User Repository

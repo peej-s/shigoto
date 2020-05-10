@@ -4,21 +4,56 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"net/http"
 	r "shigoto/repositories"
 	u "shigoto/resources"
 	"strings"
 	"time"
 
 	g "github.com/google/uuid"
+	"github.com/gorilla/mux"
 	b "golang.org/x/crypto/bcrypt"
 )
+
+func Authenticator(rw http.ResponseWriter, req *http.Request, handler http.HandlerFunc) {
+	// Get UserID from request
+	vars := mux.Vars(req)
+	userID := vars["userID"]
+	var token *u.AccessToken = &u.AccessToken{}
+
+	// Get Token from Header
+	headerToken := req.Header.Get("Authorization")
+	splitToken := strings.Split(headerToken, "Bearer")
+	if len(splitToken) != 2 {
+		http.Error(rw, "Error: Bearer token not in proper format", http.StatusBadRequest)
+		return
+	}
+	headerToken = strings.TrimSpace(splitToken[1])
+	token.Token = headerToken
+
+	// Validate Token and UserID
+	err := ValidateToken(token, userID)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	handler(rw, req)
+
+}
+
+func AuthenticationFilter(handler http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		Authenticator(rw, req, handler)
+	})
+}
 
 func GenerateToken(userID string) *u.AccessToken {
 	token := make([]byte, 16)
 	rand.Read(token)
 	accessToken := &u.AccessToken{Token: fmt.Sprintf("%x", token), UserID: userID, Expiry: time.Now().AddDate(0, 0, 1)}
 	tokenRepository := &r.TokenRepository{}
-	go tokenRepository.Upsert(accessToken)
+	tokenRepository.Upsert(accessToken)
 	return accessToken
 }
 
@@ -59,7 +94,7 @@ func RegisterUser(registerRequest *u.User) (*u.AccessToken, error) {
 	}
 	registerRequest.UserID = strings.ReplaceAll(g.New().String(), "-", "")
 
-	go userRepository.Create(registerRequest)
+	userRepository.Create(registerRequest)
 	return GenerateToken(registerRequest.UserID), nil
 }
 

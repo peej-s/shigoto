@@ -15,9 +15,9 @@ import (
 
 func getTaskListByUser(userID string) ([]byte, error) {
 	taskRepository := &r.TaskRepository{}
-	responseTaskList := taskRepository.ReadByUserID(userID)
+	response := taskRepository.ReadByUserID(userID)
 
-	js, err := json.Marshal(responseTaskList)
+	js, err := json.Marshal(response)
 	if err != nil {
 		return nil, err
 	}
@@ -30,8 +30,7 @@ func writeTask(t *u.TaskItem, userID string) ([]byte, error) {
 	t.UserID = userID
 	t.TaskID = strings.ReplaceAll(g.New().String(), "-", "")
 
-	go taskRepository.Create(t)
-	response := u.TaskCreatedResponse{Success: t.TaskID}
+	response := taskRepository.Create(t)
 
 	js, err := json.Marshal(response)
 	if err != nil {
@@ -41,8 +40,29 @@ func writeTask(t *u.TaskItem, userID string) ([]byte, error) {
 	return js, nil
 }
 
+func updateTask(userID string, taskID string, updates *u.TaskUpdate) ([]byte, error) {
+	taskRepository := &r.TaskRepository{}
+	response := taskRepository.Update(userID, taskID, updates)
+
+	js, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
+	}
+	return js, nil
+}
+
+func deleteTask(userID string, taskID string) ([]byte, error) {
+	taskRepository := &r.TaskRepository{}
+	response := taskRepository.Delete(userID, taskID)
+
+	js, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
+	}
+	return js, nil
+}
+
 func shigotoHandler(rw http.ResponseWriter, req *http.Request) {
-	// Todo: Make sure this is as simple as possible
 	vars := mux.Vars(req)
 	userID := vars["userID"]
 
@@ -67,6 +87,42 @@ func shigotoHandler(rw http.ResponseWriter, req *http.Request) {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		rw.Write(js)
+	}
+}
+
+func shigotoTaskHandler(rw http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := vars["userID"]
+	taskID := vars["taskID"]
+
+	switch req.Method {
+	case "PATCH":
+		var updates u.TaskUpdate
+		err := json.NewDecoder(req.Body).Decode(&updates)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if (updates.Priority == nil) && (updates.Task == nil) {
+			http.Error(rw, "No update fields provided in request", http.StatusBadRequest)
+			return
+		}
+
+		js, err := updateTask(userID, taskID, &updates)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		rw.Write(js)
+
+	case "DELETE":
+		js, err := deleteTask(userID, taskID)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		rw.Write(js)
 	}
 }
@@ -116,39 +172,6 @@ func shigotoUserHandler(rw http.ResponseWriter, req *http.Request) {
 	rw.Write(js)
 }
 
-func Authenticator(rw http.ResponseWriter, req *http.Request, handler http.HandlerFunc) {
-	// Get UserID from request
-	vars := mux.Vars(req)
-	userID := vars["userID"]
-	var token *u.AccessToken = &u.AccessToken{}
-
-	// Get Token from Header
-	headerToken := req.Header.Get("Authorization")
-	splitToken := strings.Split(headerToken, "Bearer")
-	if len(splitToken) != 2 {
-		http.Error(rw, "Error: Bearer token not in proper format", http.StatusBadRequest)
-		return
-	}
-	headerToken = strings.TrimSpace(splitToken[1])
-	token.Token = headerToken
-
-	// Validate Token and UserID
-	err := auth.ValidateToken(token, userID)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	handler(rw, req)
-
-}
-
-func AuthenticationFilter(handler http.HandlerFunc) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		Authenticator(rw, req, handler)
-	})
-}
-
 func main() {
 	u.InitializeResources()
 
@@ -156,7 +179,8 @@ func main() {
 	rtr.HandleFunc("/login", shigotoAuthHandler).Methods("POST")
 	rtr.HandleFunc("/register", shigotoUserHandler).Methods("POST")
 
-	rtr.Handle("/{userID:[a-zA-Z0-9]+}/tasks", AuthenticationFilter(shigotoHandler))
+	rtr.Handle("/{userID:[a-zA-Z0-9]+}/tasks", auth.AuthenticationFilter(shigotoHandler))
+	rtr.Handle("/{userID:[a-zA-Z0-9]+}/tasks/{taskID:[a-zA-Z0-9-]+}", auth.AuthenticationFilter(shigotoTaskHandler))
 
 	http.Handle("/", rtr)
 	http.ListenAndServe(":8080", nil)
