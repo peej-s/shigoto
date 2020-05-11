@@ -136,6 +136,8 @@ func shigotoAuthHandler(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
+	loginRequest.Username = strings.ToLower(loginRequest.Username)
+
 	accessToken, err := auth.ValidatePassword(&loginRequest)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
@@ -158,6 +160,7 @@ func shigotoUserHandler(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
+	registerRequest.Username = strings.ToLower(registerRequest.Username)
 
 	response, err := auth.RegisterUser(&registerRequest)
 	if err != nil {

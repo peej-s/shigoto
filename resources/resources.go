@@ -17,44 +17,44 @@ type PriorityValue int
 type TaskDescription string
 
 type TaskItem struct {
-	Priority *PriorityValue
-	Task     *TaskDescription
-	UserID   string // This should be the user ID, not the username
-	TaskID   string
+	Priority *PriorityValue   `json:"priority"`
+	Task     *TaskDescription `json:"task"`
+	UserID   string           `json:"userid"`
+	TaskID   string           `json:"taskid"`
 }
 
 type TaskUpdate struct {
-	Priority *PriorityValue
-	Task     *TaskDescription
+	Priority *PriorityValue   `json:"priority"`
+	Task     *TaskDescription `json:"task"`
 }
 
 // This can be used for both registration and login (for now)
 // Maybe later we can have mandatory emails for password resets, but do it later since we do need to validate email
 type User struct {
-	Username string
-	Password string
-	UserID   string
+	Username string `json:"username"`
+	Password string `json:"password"`
+	UserID   string `json:"userid"`
 	// Email    string
 }
 
 type AccessToken struct {
-	Token  string
-	UserID string
-	Expiry time.Time
+	Token  string    `json:"token"`
+	UserID string    `json:"userid"`
+	Expiry time.Time `json:"expiry"`
 }
 
 type CreateResponse struct {
-	Success string
+	Success string `json:"success"`
 }
 
 type UpdateResponse struct {
-	Success string
-	Updated int
+	Success string `json:"success"`
+	Updated int    `json:"updated"`
 }
 
 type DeleteResponse struct {
-	Success string
-	Deleted int
+	Success string `json:"success"`
+	Deleted int    `json:"deleted"`
 }
 
 func InitializeResources() {
