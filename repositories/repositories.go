@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"shigoto/resources"
 	u "shigoto/resources"
 	"time"
 
@@ -43,12 +44,19 @@ func (r *TaskRepository) ReadByUserID(userID string) map[u.PriorityValue][]*u.Ta
 
 	for cur.Next(ctx) {
 		var elem u.TaskItem
+		var priority resources.PriorityValue
 		err := cur.Decode(&elem)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		results[*elem.Priority] = append(results[*elem.Priority], &elem)
+		if elem.Priority == nil {
+			priority = 0
+		} else {
+			priority = *elem.Priority
+		}
+
+		results[priority] = append(results[priority], &elem)
 	}
 
 	if err := cur.Err(); err != nil {
