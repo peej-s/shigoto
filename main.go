@@ -12,6 +12,7 @@ import (
 	u "shigoto/resources"
 
 	g "github.com/google/uuid"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -194,7 +195,12 @@ func main() {
 	}
 
 	log.Printf("Listening on port %s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+
+	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	methods := handlers.AllowedMethods([]string{"GET", "POST", "PATCH", "OPTIONS", "DELETE"})
+	origins := handlers.AllowedOrigins([]string{"https://shigoto-app.netlify.app"})
+	corsFunc := handlers.CORS(headers, methods, origins)
+	if err := http.ListenAndServe(":"+port, corsFunc(rtr)); err != nil {
 		log.Fatal(err)
 	}
 }
