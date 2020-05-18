@@ -1,4 +1,0 @@
-steps:
-# Build the module.
-- name: golang
-  args: ['go', 'build', '.']
