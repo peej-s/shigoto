@@ -1,4 +1,4 @@
-App: https://shigoto-app.netlify.app/
+App: https://shigoto-app.netlify.app/  
 Frontend: https://github.com/peej-s/shigoto-frontend
 
 Backend API
