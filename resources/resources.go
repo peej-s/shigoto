@@ -24,8 +24,8 @@ type TaskItem struct {
 }
 
 type TaskUpdate struct {
-	Priority *PriorityValue   `json:"priority"`
-	Task     *TaskDescription `json:"task"`
+	Priority *PriorityValue   `json:"priority" bson:"priority,omitempty"`
+	Task     *TaskDescription `json:"task" bson:"task,omitempty"`
 }
 
 // This can be used for both registration and login (for now)
